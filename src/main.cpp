@@ -101,13 +101,29 @@ int main() {
           double steer_value;
           double throttle_value;
 
+
+          // convert ptsx and ptsy to Eigen VectorXd
+          double* ptr = &ptsx[0];
+          Eigen::Map<Eigen::VectorXd> ptsx_Eigen(ptr, ptsx.size());
+          ptr = &ptsy[0];
+          Eigen::Map<Eigen::VectorXd> ptsy_Eigen(ptr, ptsy.size());
+
+          // Fit a polynomial to the x and y coordinates
+          auto coeffs = polyfit(ptsx_Eigen, ptsy_Eigen, 1);
+
+          // calculate cross track error by evaluating poly at f(x)
+          // and subtracting y
+          double cte = polyeval(coeffs, px) - py;
+
+
+
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
 
-          //Display the MPC predicted trajectory 
+          //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
