@@ -92,15 +92,7 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-          double steer_value;
-          double throttle_value;
-
+          // START SOLVING
 
           // convert ptsx and ptsy to Eigen VectorXd
           double* ptr = &ptsx[0];
@@ -114,8 +106,23 @@ int main() {
           // calculate cross track error by evaluating poly at f(x)
           // and subtracting y
           double cte = polyeval(coeffs, px) - py;
+          // Due to the sign starting at 0, the orientation error is -f'(x).
+          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
+          double epsi = psi - atan(coeffs[1]);
 
+          Eigen::VectorXd state(6);
+          state << px, py, psi, v, cte, epsi;
 
+          auto vars = mpc.Solve(state, coeffs);
+
+          /*
+          * TODO: Calculate steering angle and throttle using MPC.
+          *
+          * Both are in between [-1, 1].
+          *
+          */
+          double steer_value = (vars[6]*(-1))/deg2rad(25); // multiply by negative 1 to accomodate simulator
+          double throttle_value = vars[7];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
