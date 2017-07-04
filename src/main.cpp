@@ -65,6 +65,33 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+// Transform world coords to vehicle coordinates
+Eigen::MatrixXd transformCoords(vector<double> ptsx, vector<double> ptsy, double px,
+                                double py, double psi) {
+  const double cos_theta = cos(psi - M_PI / 2);
+  const double sin_theta = sin(psi - M_PI / 2);
+  double wayY, wayX;
+
+  for(size_t i = 0; i < ptsx.size(); i++) {
+    wayX = ptsx[i];
+    wayY = ptsy[i];
+    ptsx[i] = -(wayX-px)*sin_theta+(wayY-py)*cos_theta;
+    ptsy[i] = -(wayX-px)*cos_theta-(wayY-py)*sin_theta;
+  }
+
+  // convert ptsx and ptsy to Eigen VectorXd
+  double* ptr = &ptsx[0];
+  Eigen::Map<Eigen::VectorXd> ptsx_Eigen(ptr, ptsx.size());
+  ptr = &ptsy[0];
+  Eigen::Map<Eigen::VectorXd> ptsy_Eigen(ptr, ptsy.size());
+
+  Eigen::MatrixXd newCoords(ptsx.size(),2);
+  newCoords << ptsx_Eigen, ptsy_Eigen;
+
+  return newCoords;
+
+}
+
 int main() {
   uWS::Hub h;
 
@@ -93,15 +120,10 @@ int main() {
           double v = j[1]["speed"];
 
           // START SOLVING
-
-          // convert ptsx and ptsy to Eigen VectorXd
-          double* ptr = &ptsx[0];
-          Eigen::Map<Eigen::VectorXd> ptsx_Eigen(ptr, ptsx.size());
-          ptr = &ptsy[0];
-          Eigen::Map<Eigen::VectorXd> ptsy_Eigen(ptr, ptsy.size());
+          Eigen::MatrixXd coords = transformCoords(ptsx, ptsy, px, py, psi);
 
           // Fit a polynomial to the x and y coordinates
-          auto coeffs = polyfit(ptsx_Eigen, ptsy_Eigen, 1);
+          auto coeffs = polyfit(coords.col(0), coords.col(1), 1);
 
           // calculate cross track error by evaluating poly at f(x)
           // and subtracting y
