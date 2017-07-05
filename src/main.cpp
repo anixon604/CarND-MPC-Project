@@ -44,8 +44,15 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
 // Fit a polynomial.
 // Adapted from
 // https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
+Eigen::VectorXd polyfit(vector<double> ptsx, vector<double> ptsy,
                         int order) {
+
+  // convert ptsx and ptsy to Eigen VectorXd
+  double* ptr = &ptsx[0];
+  Eigen::Map<Eigen::VectorXd> xvals(ptr, ptsx.size());
+  ptr = &ptsy[0];
+  Eigen::Map<Eigen::VectorXd> yvals(ptr, ptsy.size());
+
   assert(xvals.size() == yvals.size());
   assert(order >= 1 && order <= xvals.size() - 1);
   Eigen::MatrixXd A(xvals.size(), order + 1);
@@ -66,33 +73,20 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 // Transform world coords to vehicle coordinates
-Eigen::MatrixXd transformCoords(vector<double> ptsx, vector<double> ptsy, double px,
+void transformCoords(vector<double>& ptsx, vector<double>& ptsy, double px,
                                 double py, double psi) {
-  const double cos_theta = cos(psi - M_PI / 2);
-  const double sin_theta = sin(psi - M_PI / 2);
-  // const double cos_theta = cos(psi);
-  // const double sin_theta = sin(psi);
+  double cos_theta = cos(psi - M_PI / 2.0);
+  double sin_theta = sin(psi - M_PI / 2.0);
+
   double wayY, wayX;
 
   for(size_t i = 0; i < ptsx.size(); i++) {
     wayX = ptsx[i];
     wayY = ptsy[i];
-    // ptsx[i] = (wayX-px)*cos_theta+(wayY-py)*sin_theta;
-    // ptsy[i] = (wayY-py)*cos_theta+(wayX-px)*sin_theta;
+
     ptsx[i] = -(wayX-px)*sin_theta+(wayY-py)*cos_theta;
     ptsy[i] = -(wayX-px)*cos_theta-(wayY-py)*sin_theta;
   }
-
-  // convert ptsx and ptsy to Eigen VectorXd
-  double* ptr = &ptsx[0];
-  Eigen::Map<Eigen::VectorXd> ptsx_Eigen(ptr, ptsx.size());
-  ptr = &ptsy[0];
-  Eigen::Map<Eigen::VectorXd> ptsy_Eigen(ptr, ptsy.size());
-
-  Eigen::MatrixXd newCoords(ptsx.size(),2);
-  newCoords << ptsx_Eigen, ptsy_Eigen;
-
-  return newCoords;
 
 }
 
@@ -124,20 +118,20 @@ int main() {
           double v = j[1]["speed"];
 
           // START SOLVING
-          Eigen::MatrixXd coords = transformCoords(ptsx, ptsy, px, py, psi);
+          transformCoords(ptsx, ptsy, px, py, psi);
 
           // Fit a polynomial to the x and y coordinates
-          auto coeffs = polyfit(coords.col(0), coords.col(1), 3);
+          auto coeffs = polyfit(ptsx, ptsy, 3);
 
           // calculate cross track error by evaluating poly at f(x)
           // and subtracting y
-          double cte = polyeval(coeffs, px) - py;
+          double cte = polyeval(coeffs, 0.0) - 0;
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
-          double epsi = psi - atan(coeffs[1]);
+          double epsi = -atan(coeffs[1]);
 
           Eigen::VectorXd state(6);
-          state << px, py, psi, v, cte, epsi;
+          state << 0, 0, 0, v, cte, epsi;
 
           //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
@@ -169,6 +163,8 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+          next_x_vals = ptsx;
+          next_y_vals = ptsy;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
