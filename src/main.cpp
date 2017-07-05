@@ -41,7 +41,7 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
   return result;
 }
 
-// Fit a polynomial.
+// Fit a polynomial. - MODIFIED to take in point vectors and convert to Eigen
 // Adapted from
 // https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
 Eigen::VectorXd polyfit(vector<double> ptsx, vector<double> ptsy,
@@ -72,7 +72,7 @@ Eigen::VectorXd polyfit(vector<double> ptsx, vector<double> ptsy,
   return result;
 }
 
-// Transform world coords to vehicle coordinates
+// Transform world coords to vehicle coordinates - Modify by reference
 void transformCoords(vector<double>& ptsx, vector<double>& ptsy, double px,
                                 double py, double psi) {
   double cos_theta = cos(psi - M_PI / 2.0);
@@ -87,7 +87,6 @@ void transformCoords(vector<double>& ptsx, vector<double>& ptsy, double px,
     ptsx[i] = -(wayX-px)*sin_theta+(wayY-py)*cos_theta;
     ptsy[i] = -(wayX-px)*cos_theta-(wayY-py)*sin_theta;
   }
-
 }
 
 int main() {
@@ -117,40 +116,47 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          //Display vectors for the MPC predicted trajectory
+          vector<double> mpc_x_vals;
+          vector<double> mpc_y_vals;
+          //Display vectors for the waypoints/reference line
+          vector<double> next_x_vals;
+          vector<double> next_y_vals;
+          //Actuator values
+          double steer_value;
+          double throttle_value;
+
           // START SOLVING
+
+          // tranform from world to vehicle coords
           transformCoords(ptsx, ptsy, px, py, psi);
 
-          // Fit a polynomial to the x and y coordinates
+          // Fit a polynomial to the x and y coordinates - use 3rd degree
           auto coeffs = polyfit(ptsx, ptsy, 3);
 
           // calculate cross track error by evaluating poly at f(x)
-          // and subtracting y
+          // and subtracting y. x is 0 relative to direction of vehicle
           double cte = polyeval(coeffs, 0.0) - 0;
+
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           double epsi = -atan(coeffs[1]);
 
+          // current state for MPC is origin at vehicle point
           Eigen::VectorXd state(6);
           state << 0, 0, 0, v, cte, epsi;
 
-          //Display the MPC predicted trajectory
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
-
+          // solve with MPC - return mpc_x_vals and mpc_y_vals for visualizations
           auto vars = mpc.Solve(state, coeffs, mpc_x_vals, mpc_y_vals);
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-          double steer_value = (vars[6]*(-1))/deg2rad(25); // multiply by negative 1 to accomodate simulator
-          double throttle_value = vars[7];
-
-          json msgJson;
+          // steer value and throttle are between [-1,1]
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          steer_value = (vars[6]*(-1))/deg2rad(25); // multiply by negative 1 to accomodate simulator
+          throttle_value = vars[7];
+
+          json msgJson;
+
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
 
@@ -160,9 +166,6 @@ int main() {
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
-          //Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
           next_x_vals = ptsx;
           next_y_vals = ptsy;
 

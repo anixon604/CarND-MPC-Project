@@ -142,8 +142,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<
   double cte = state[4];
   double epsi = state[5];
 
-  // TODO: Set the number of model variables (includes both states and inputs).
-  // For example: If the state is a 4 element vector, the actuators is a 2
+  // If the state is a 4 element vector, the actuators is a 2
   // element vector and there are 10 timesteps. The number of variables is:
   //
   // 4 * 10 + 2 * 9
@@ -168,7 +167,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
-  // TODO: Set lower and upper limits for variables.
 
   // Set all non-actuators upper and lowerlimits
   // to the max negative and positive values.
@@ -247,9 +245,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<
   // Check some of the solution values
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
-  // check if solver has Failed
+  // exit if solver fails due to time-out etc. - Credit Levin Jian suggestion error check
   if(!ok){
-    std::cout << "Fatal error: failed to find optimal parameters!!!" << std::endl;
+    std::cout << "Solver Failed!" << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -263,7 +261,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<
 	}
 
 
-  // TODO: Return the first actuator values. The variables can be accessed with
+  // Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
