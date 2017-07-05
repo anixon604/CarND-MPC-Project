@@ -149,6 +149,8 @@ int main() {
           // solve with MPC - return mpc_x_vals and mpc_y_vals for visualizations
           auto vars = mpc.Solve(state, coeffs, mpc_x_vals, mpc_y_vals);
 
+          // Handle Latency
+
           // steer value and throttle are between [-1,1]
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
