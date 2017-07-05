@@ -127,7 +127,7 @@ int main() {
           Eigen::MatrixXd coords = transformCoords(ptsx, ptsy, px, py, psi);
 
           // Fit a polynomial to the x and y coordinates
-          auto coeffs = polyfit(coords.col(0), coords.col(1), 1);
+          auto coeffs = polyfit(coords.col(0), coords.col(1), 3);
 
           // calculate cross track error by evaluating poly at f(x)
           // and subtracting y
@@ -139,7 +139,11 @@ int main() {
           Eigen::VectorXd state(6);
           state << px, py, psi, v, cte, epsi;
 
-          auto vars = mpc.Solve(state, coeffs);
+          //Display the MPC predicted trajectory
+          vector<double> mpc_x_vals;
+          vector<double> mpc_y_vals;
+
+          auto vars = mpc.Solve(state, coeffs, mpc_x_vals, mpc_y_vals);
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -155,10 +159,6 @@ int main() {
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
-
-          //Display the MPC predicted trajectory
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line

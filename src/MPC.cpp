@@ -6,7 +6,7 @@
 using CppAD::AD;
 
 // the timestep length and duration
-size_t N = 10;
+size_t N = 15;
 double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
@@ -102,8 +102,11 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      // AD<double> f0 = coeffs[0] + coeffs[1] * x0;
+      // AD<double> psides0 = CppAD::atan(coeffs[1]);
+
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] *CppAD::pow(x0,2) + coeffs[3] *CppAD::pow(x0,3);
+			AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3]*CppAD::pow(x0,2));
 
       // NOTE: The use of `AD<double>` and use of `CppAD`!
       // CppAD can compute derivatives and pass
@@ -111,7 +114,7 @@ class FG_eval {
 
       fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-      fg[1 + psi_start + t] = psi1 - (psi0 + v0 / Lf * delta0 * dt);
+      fg[1 + psi_start + t] = psi1 - (psi0 + (v0 / Lf) * delta0 * dt);
       fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
       fg[1 + cte_start + t] =
           cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
@@ -127,7 +130,8 @@ class FG_eval {
 MPC::MPC() {}
 MPC::~MPC() {}
 
-vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<double>& mpc_x,
+                          vector<double>& mpc_y) {
   bool ok = true;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
@@ -243,9 +247,21 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Check some of the solution values
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
+  // check if solver has Failed
+  if(!ok){
+    std::cout << "Fatal error: failed to find optimal parameters!!!" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
+
+  for (size_t i = 0; i < N; i++){
+		mpc_x.push_back(solution.x[x_start + i]);
+		mpc_y.push_back(solution.x[y_start + i]);
+	}
+
 
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
