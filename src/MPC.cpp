@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // the timestep length and duration
-size_t N = 20;
-double dt = 0.1;
+size_t N = 10;
+double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -22,7 +22,7 @@ double dt = 0.1;
 const double Lf = 2.67;
 
 // Reference Velocity for cost function
-double ref_v = 40;
+double ref_v = 30;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -35,6 +35,9 @@ size_t cte_start = v_start + N;
 size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
+
+const double coeffDelta = 100.0;
+const double coeffDeltaGap = 1000.0;
 
 class FG_eval {
  public:
@@ -57,13 +60,13 @@ class FG_eval {
 
     // Minimize the use of actuators.
     for (size_t t = 0; t < N - 1; t++) {
-      fg[0] += 120*CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += coeffDelta*CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (size_t t = 0; t < N - 2; t++) {
-      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += coeffDeltaGap*CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
 

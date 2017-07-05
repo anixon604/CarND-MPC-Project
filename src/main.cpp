@@ -70,11 +70,15 @@ Eigen::MatrixXd transformCoords(vector<double> ptsx, vector<double> ptsy, double
                                 double py, double psi) {
   const double cos_theta = cos(psi - M_PI / 2);
   const double sin_theta = sin(psi - M_PI / 2);
+  // const double cos_theta = cos(psi);
+  // const double sin_theta = sin(psi);
   double wayY, wayX;
 
   for(size_t i = 0; i < ptsx.size(); i++) {
     wayX = ptsx[i];
     wayY = ptsy[i];
+    // ptsx[i] = (wayX-px)*cos_theta+(wayY-py)*sin_theta;
+    // ptsy[i] = (wayY-py)*cos_theta+(wayX-px)*sin_theta;
     ptsx[i] = -(wayX-px)*sin_theta+(wayY-py)*cos_theta;
     ptsy[i] = -(wayX-px)*cos_theta-(wayY-py)*sin_theta;
   }
